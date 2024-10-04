@@ -2,10 +2,12 @@ import { createRouter, createWebHistory } from "vue-router";
 
 //연결할 각 컴포넌트 import
 import TodoArea from "@/views/TodoArea.vue";
+import TodoList from "@/views/TodoList.vue"; // TodoList.vue 임포트
 
 //라우터 설계
 const routes = [
-    {path: '/1', component:TodoArea}
+    {path: '/1', component:TodoArea},
+    { path: '/todos', component: TodoList }, // TodoList 경로 추가
 ]
 
 //라우터 생성
