@@ -1,9 +1,21 @@
 <template>
+  <div>
+    <!-- TodoHeader 컴포넌트 포함 -->
+    <TodoHeader />
     <div class="todo-app">
       <h1>Todo List</h1>
       <div ref="tabulator"></div>
       <div class="new-todo">
-        <input v-model="newTodo" placeholder="Add new todo" />
+        <!-- 할 일 추가 입력란과 버튼 -->
+        <select v-model="selectedCategory" class="category-select">
+          <option disabled value="">카테고리 선택</option>
+          <option value="가사">가사</option>
+          <option value="공부">공부</option>
+          <option value="쇼핑">쇼핑</option>
+          <option value="일상">일상</option>
+          <option value="약속 및 일정">약속 및 일정</option>
+        </select>
+        <input v-model="newTodo" placeholder="새로운 할 일 추가" />
         <MyButton buttonClass="add" @click="addTodo">Add Todo</MyButton>
       </div>
       <EditModal
@@ -13,50 +25,60 @@
         @close="closeModal"
       />
     </div>
-  </template>
-  
-  <script>
-  import { TabulatorFull as Tabulator } from "tabulator-tables";
-  import "tabulator-tables/dist/css/tabulator.min.css";
-  import MyButton from "@/components/MyButton.vue"; // 수정된 경로
-  import EditModal from "@/components/EditModal.vue"; // 수정된 경로
-  
-  export default {
-    components: {
-      MyButton,
-      EditModal,
-    },
-    data() {
-      return {
-        todos: [
-          { id: 1, title: "vue.js 공부하기", completed: false },
-          { id: 2, title: "다이소에서 전선클립 구매하기", completed: false },
-        ],
-        newTodo: "",
-        table: null,
-        showModal: false,
-        editTodoId: null,
-        editTodoTitle: "",
-        nextId: 3, // 내부적으로 관리할 고유 ID 값
-      };
-    },
-    mounted() {
-      this.updateDisplayIds();
+  </div>
+</template>
+
+<script>
+import TodoHeader from "@/components/TodoHeader.vue";
+import MyButton from "@/components/MyButton.vue";
+import EditModal from "@/components/EditModal.vue";
+import { TabulatorFull as Tabulator } from "tabulator-tables";
+import "tabulator-tables/dist/css/tabulator.min.css";
+
+export default {
+  name: "TodoList",
+  components: {
+    TodoHeader,
+    MyButton,
+    EditModal,
+  },
+  data() {
+    return {
+      todos: [
+        { id: 1, displayId: 1, title: "영어 공부하기", category: "공부", completed: false },
+        { id: 2, displayId: 2, title: "도시락통 설거지하기", category: "집안일", completed: false },
+        { id: 3, displayId: 3, title: "토요일에 친구랑 약속", category: "약속 및 일정", completed: false },
+        { id: 4, displayId: 4, title: "물 4잔 마시기", category: "일상", completed: false },
+      ],
+      newTodo: "",
+      selectedCategory: "", // 사용자가 선택한 카테고리 저장
+      table: null,
+      showModal: false,
+      editTodoId: null,
+      editTodoTitle: "",
+      nextId: 3,
+    };
+  },
+  mounted() {
+    this.initializeTable();
+  },
+  updated() {
+    if (this.table) {
+      this.table.replaceData(this.todos);
+    }
+  },
+  methods: {
+    initializeTable() {
       this.table = new Tabulator(this.$refs.tabulator, {
         data: this.todos,
         layout: "fitColumns",
         pagination: "local",
         paginationSize: 10,
         autoHeight: true,
-        columns: this.getColumns(),
-      });
-    },
-    methods: {
-      getColumns() {
-        return [
+        columns: [
           {
             title: "No",
-            field: "displayId",
+            field: "displayId", // 사용자에게 보여질 순서 번호
             sorter: "number",
             width: 80,
             hozAlign: "center",
@@ -66,6 +88,13 @@
             field: "title",
             sorter: "string",
             widthGrow: 3,
+            headerHozAlign:'center',
+          },
+          {
+            title: "Category",
+            field: "category", // 카테고리 칼럼
+            sorter: "string",
+            width: 50,
           },
           {
             title: "Status",
@@ -98,130 +127,95 @@
             align: "center",
             cellClick: (e, cell) => this.handleIconClick(e, cell),
           },
-        ];
-      },
-      handleIconClick(e, cell) {
-        const row = cell.getRow().getData();
-        if (e.target.classList.contains("edit-icon")) {
-          this.openEditModal(row.id, row.title);
-        } else if (e.target.classList.contains("delete-icon")) {
-          this.deleteTodo(row.id);
-        }
-      },
-      openEditModal(id, title) {
-        this.editTodoId = id;
-        this.editTodoTitle = title;
-        this.showModal = true;
-      },
-      closeModal() {
-        this.showModal = false;
-        this.editTodoId = null;
-        this.editTodoTitle = "";
-      },
-      updateTodo(newTitle) {
-        const todoIndex = this.todos.findIndex(
-          (todo) => todo.id === this.editTodoId
-        );
-        if (todoIndex !== -1) {
-          this.todos[todoIndex].title = newTitle;
-          this.table.updateData([{ id: this.editTodoId, title: newTitle }]);
-        }
-        this.closeModal();
-      },
-      addTodo() {
-        if (this.newTodo.trim() !== "") {
-          const newTodoItem = {
-            id: this.nextId,
-            title: this.newTodo,
-            completed: false,
-          };
-          this.todos.push(newTodoItem);
-          this.table.addRow(newTodoItem);
-          this.updateDisplayIds();
-          this.table.setData(this.todos);
-          this.newTodo = "";
-          this.nextId += 1;
-        }
-      },
-      deleteTodo(id) {
-        this.todos = this.todos.filter((todo) => todo.id !== id);
-        this.updateDisplayIds();
-        this.table.setData(this.todos);
-      },
-      updateDisplayIds() {
-        this.todos.forEach((todo, index) => {
-          todo.displayId = index + 1;
-        });
-      },
-      toggleCompleted(id) {
-        const todo = this.todos.find((todo) => todo.id === id);
-        if (todo) {
-          todo.completed = !todo.completed;
-          this.table.updateData([{ id, completed: todo.completed }]);
-        }
-      },
+        ],
+      });
     },
-  };
-  </script>
-  
-  <style scoped>
+    handleIconClick(e, cell) {
+      const row = cell.getRow().getData();
+      if (e.target.classList.contains("edit-icon")) {
+        this.openEditModal(row.id, row.title);
+      } else if (e.target.classList.contains("delete-icon")) {
+        this.deleteTodo(row.id);
+      }
+    },
+    addTodo() {
+      if (this.newTodo.trim() !== "" && this.selectedCategory) {
+        const newTodoItem = {
+          id: this.nextId,
+          displayId: this.todos.length + 1,
+          title: this.newTodo,
+          category: this.selectedCategory, // 선택한 카테고리 추가
+          completed: false,
+        };
+        this.todos.push(newTodoItem); // Vue 데이터 업데이트
+        this.table.addRow(newTodoItem); // Tabulator 테이블에 항목 추가
+        this.newTodo = ""; // 입력란 초기화
+        this.selectedCategory = ""; // 선택된 카테고리 초기화
+        this.nextId += 1; // 다음 ID 증가
+      }
+    },
+    deleteTodo(id) {
+      this.todos = this.todos.filter((todo) => todo.id !== id);
+      this.updateDisplayIds();
+      this.table.setData(this.todos);
+    },
+    toggleCompleted(id) {
+      const todo = this.todos.find((todo) => todo.id === id);
+      if (todo) {
+        todo.completed = !todo.completed;
+        this.table.updateData([{ id, completed: todo.completed }]);
+      }
+    },
+    openEditModal(id, title) {
+      this.editTodoId = id;
+      this.editTodoTitle = title;
+      this.showModal = true;
+    },
+    closeModal() {
+      this.showModal = false;
+      this.editTodoId = null;
+      this.editTodoTitle = "";
+    },
+    updateTodo(newTitle) {
+      const todoIndex = this.todos.findIndex(
+        (todo) => todo.id === this.editTodoId
+      );
+      if (todoIndex !== -1) {
+        this.todos[todoIndex].title = newTitle;
+        this.table.updateData([{ id: this.editTodoId, title: newTitle }]);
+      }
+      this.closeModal();
+    },
+    updateDisplayIds() {
+      this.todos.forEach((todo, index) => {
+        todo.displayId = index + 1;
+      });
+    },
+  },
+};
+</script>
 
+<style scoped>
+/* 기존 스타일 그대로 유지 */
 .todo-app {
   max-width: 1000px;
   margin: 50px auto;
-  font-family: "Noto Sans KR", sans-serif; /* 모던하고 깔끔한 느낌의 폰트로 변경 */
+  font-family: "Noto Sans KR", sans-serif;
   text-align: center;
-  background-color: #ffe6f0; /* 연한 파스텔 핑크 배경 */
+  background-color: #ffe6f0;
   padding: 20px;
-  border-radius: 16px; /* 전체 컨테이너에 둥글게 테두리 */
+  border-radius: 16px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
-
 .new-todo {
   margin-top: 50px;
 }
 
-.new-todo input {
+.new-todo input, .category-select {
   padding: 10px;
-  width: 70%;
-  border: 1px solid #f8b6c8; /* 연한 핑크 테두리 */
-  border-radius: 16px; /* 입력 필드를 둥글게 */
+  margin-right: 10px;
+  border: 1px solid #f8b6c8;
+  border-radius: 16px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.new-todo button {
-  padding: 10px 20px;
-  margin-left: 10px;
-  background: #ff85a1; /* 버튼 배경을 파스텔 핑크로 */
-  color: white;
-  border: none;
-  border-radius: 16px; /* 버튼을 둥글게 */
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: background-color 0.3s ease, transform 0.2s ease;
-}
-
-/* Tabulator 테이블 커스터마이징 - 파스텔 핑크와 둥글게 */
-.todo-app .tabulator {
-  width: 100%; /* 테이블 너비를 페이지 전체 너비로 설정 */
-  border: 1px solid #f8b6c8; /* 테두리 색상을 연한 핑크로 변경 */
-  border-radius: 16px; /* 테두리를 둥글게 */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 그림자 추가 */
-}
-
-.todo-app .tabulator .tabulator-cell {
-  padding: 12px 8px; /* 셀 패딩 설정 */
-  border-right: 1px solid #f8b6c8; /* 셀 간의 구분 테두리 */
-  text-align: center;
-}
-
-.todo-app .tabulator .tabulator-cell:last-child {
-  border-right: none; /* 마지막 셀 테두리 제거 */
-}
-
-.todo-app .tabulator .status-icon:hover {
-  color: #ff6783 !important; /* 호버 시 색상 약간 어둡게 */
 }
 </style>
-
-  

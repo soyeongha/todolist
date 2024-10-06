@@ -6,7 +6,8 @@ import TodoList from "@/views/TodoList.vue"; // TodoList.vue 임포트
 
 //라우터 설계
 const routes = [
-    {path: '/1', component:TodoArea},
+    {path: '/', component: TodoList},
+    {path: '/todo-area', component:TodoArea},
     { path: '/todos', component: TodoList }, // TodoList 경로 추가
 ]
 
